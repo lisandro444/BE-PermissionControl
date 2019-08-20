@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/PermissionControlAzureFunctions/.vs/PermissionControlAzureFunctions/v15
+/.vs
+/PermissionControlAzureFunctions/.vs/config/applicationhost.config
