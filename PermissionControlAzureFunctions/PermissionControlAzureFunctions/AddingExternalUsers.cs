@@ -42,40 +42,52 @@ namespace PermissionControlAzureFunctions
                 Site site = tenant.GetSiteByUrl(siteUrl);
                 Web web = site.RootWeb;
                 Group group = null;
-       
-                ctx.Load(web, w => w.SiteGroups);
-               
+                RoleDefinitionCollection permissionLevels = web.RoleDefinitions;
+
+                ctx.Load(web);
+                ctx.Load(web.SiteGroups);
+                ctx.Load(permissionLevels);
+ 
                 ctx.ExecuteQuery();
 
-                // Check if the group exists
-                group = web.SiteGroups.GetByName(groupName);
-
-                // If it doesn't exist, add it
-                if (group == null)
+                // If group doesn't exist in web, add it
+                if (!GroupExistsInWebSite(web, groupName))
                 {
                     if(groupName == "SCJ External Contribute")
                     {
-                        // Create the Group
-                        CreateContributePermissionLevel(ctx);
-                        AddGroup(ctx, groupName);
-                        ctx.Web.AddUserToGroup(group, "lisandro.rossi@spr.com");
+                        //var permissionLevelExist = permissionLevels.Select(p => p.Name == "SCJ External Contribute").Count();
+                        // Create Custom Permission Level
+                        //if (permissionLevelExist!=0)
+                        CreateContributePermissionLevel(web);
+                        // Create new Group
+                        group = AddGroup(web, groupName);
+                        // Add Custom Pemission Level to Group
+                        web.AddPermissionLevelToGroup(groupName, "SCJ External Contribute", true);
+
+                        web.AddUserToGroup(group, currentEmail);
                     }
 
                     if (groupName == "SCJ External Read")
                     {
-                        // Create the Group and Add the User
-                        CreateContributePermissionLevel(ctx);
-                        AddGroup(ctx, groupName);
+                        // Create Custom Permission Level
+                        CreateReadPermissionLevel(web);
+                        // Create new Group
+                        group = AddGroup(web, groupName);
+                        // Add Custom Pemission Level to Group
+                        web.AddPermissionLevelToGroup(groupName, "SCJ External Read", true);
 
-                        ctx.Web.AddUserToGroup(group, "lisandro.rossi@spr.com");
+                        web.AddUserToGroup(group, currentEmail);
                     }
 
                 }
                 else // Just Add the user to group
                 {
-                    ctx.Web.AddUserToGroup(group, "lisandro.rossi@spr.com");
-                    // testGroup.InviteExternalUser("mahesh.srinivasan@spr.com");  
+                    group = web.SiteGroups.GetByName(groupName);
+                    //web.AddUserToGroup(group, "lisandrorossi444@gmail.com");
+                    //group.InviteExternalUser("lisandrorossi444@gmail.com");  
                 }
+
+                ctx.ExecuteQuery();
 
                 return req.CreateResponse(HttpStatusCode.OK, false);
 
@@ -86,62 +98,64 @@ namespace PermissionControlAzureFunctions
             }
         }
 
-
-        private static bool checkUserDomainFrom(string emailAddress, string SiteUrl)
+        private static bool CheckUserDomainFrom(string emailAddress, string SiteUrl)
         {
 
-            // check if the domain from email adress is inclued into list white domain
+            // check if the domain from email address is inclued into list white domain
 
             return true;
 
         }
 
-        private static void AddGroup(ClientContext ctx, string groupName)
+        private static bool GroupExistsInWebSite(Web web, string name)
         {
-            //add groupo to a site with the same name as permission level
-            ctx.Site.RootWeb.AddGroup(groupName, "Permission Control - Custom Group for External User", false, true, false);
-            ctx.Web.AddPermissionLevelToGroup(groupName, "Permission Control - Custom Permission for External User", true);
-
+            return web.SiteGroups.OfType<Group>().Count(g => g.Title.Equals(name, StringComparison.InvariantCultureIgnoreCase)) > 0;
         }
 
-        private static void CreateContributePermissionLevel(ClientContext ctx)
+        private static Group AddGroup(Web web, string groupName)
         {
-            // Create New Custom Permission Level
-            RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
-            BasePermissions perms = new BasePermissions();
-            perms.Set(PermissionKind.AddListItems);
-            perms.Set(PermissionKind.EditListItems);
-            perms.Set(PermissionKind.DeleteListItems);
-            perms.Set(PermissionKind.ViewListItems);
-            perms.Set(PermissionKind.ApproveItems);
-            perms.Set(PermissionKind.OpenItems);
-            perms.Set(PermissionKind.ViewVersions);
-            perms.Set(PermissionKind.DeleteVersions);
-            perms.Set(PermissionKind.CreateAlerts);
-            perms.Set(PermissionKind.ViewPages);
-            roleDefinitionCreationInformation.BasePermissions = perms;
-            roleDefinitionCreationInformation.Name = "SCJ External Contribute";
-            roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Contribute";
-            ctx.Site.RootWeb.RoleDefinitions.Add(roleDefinitionCreationInformation);
-
+            var newGroup =  web.AddGroup(groupName, "Permission Control - Custom Contribute Group for External User", true, true, false);
+            return newGroup;
         }
 
-        private static void CreateReadPermissionLevel(ClientContext ctx)
+        private static void CreateContributePermissionLevel(Web web)
         {
-            // Create New Custom Permission Level
-            RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
-            BasePermissions perms = new BasePermissions();
-            perms.Set(PermissionKind.ViewListItems);
-            perms.Set(PermissionKind.ApproveItems);
-            perms.Set(PermissionKind.OpenItems);
-            perms.Set(PermissionKind.ViewVersions);
-            perms.Set(PermissionKind.DeleteVersions);
-            perms.Set(PermissionKind.CreateAlerts);
-            perms.Set(PermissionKind.ViewPages);
-            roleDefinitionCreationInformation.BasePermissions = perms;
-            roleDefinitionCreationInformation.Name = "SCJ External Read";
-            roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Read";
-            ctx.Site.RootWeb.RoleDefinitions.Add(roleDefinitionCreationInformation);
+                // Create New Custom Permission Level
+                RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
+                BasePermissions perms = new BasePermissions();
+                perms.Set(PermissionKind.AddListItems);
+                perms.Set(PermissionKind.EditListItems);
+                perms.Set(PermissionKind.DeleteListItems);
+                perms.Set(PermissionKind.ViewListItems);
+                perms.Set(PermissionKind.ApproveItems);
+                perms.Set(PermissionKind.OpenItems);
+                perms.Set(PermissionKind.ViewVersions);
+                perms.Set(PermissionKind.DeleteVersions);
+                perms.Set(PermissionKind.CreateAlerts);
+                perms.Set(PermissionKind.ViewPages);
+                roleDefinitionCreationInformation.BasePermissions = perms;
+                roleDefinitionCreationInformation.Name = "SCJ External Contribute";
+                roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Contribute";
+                web.RoleDefinitions.Add(roleDefinitionCreationInformation);
+            
+        }
+
+        private static void CreateReadPermissionLevel(Web web)
+        {          
+                // Create New Custom Permission Level
+                RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
+                BasePermissions perms = new BasePermissions();
+                perms.Set(PermissionKind.ViewListItems);
+                perms.Set(PermissionKind.ApproveItems);
+                perms.Set(PermissionKind.OpenItems);
+                perms.Set(PermissionKind.ViewVersions);
+                perms.Set(PermissionKind.DeleteVersions);
+                perms.Set(PermissionKind.CreateAlerts);
+                perms.Set(PermissionKind.ViewPages);
+                roleDefinitionCreationInformation.BasePermissions = perms;
+                roleDefinitionCreationInformation.Name = "SCJ External Read";
+                roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Read";
+                web.RoleDefinitions.Add(roleDefinitionCreationInformation);          
         }
     }
 }
