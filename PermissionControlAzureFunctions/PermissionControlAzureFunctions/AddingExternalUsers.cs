@@ -2,15 +2,18 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Mail;
 using System.Security;
 using System.Threading.Tasks;
+using System.Web.Script.Serialization;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Online.SharePoint.TenantAdministration;
 using Microsoft.SharePoint.Client;
 using Microsoft.SharePoint.Client.Utilities;
+using Newtonsoft.Json;
 using OfficeDevPnP.Core.Utilities;
 
 namespace PermissionControlAzureFunctions
@@ -50,8 +53,8 @@ namespace PermissionControlAzureFunctions
                 ctx.Load(web.SiteGroups);
                 ctx.Load(siteProps);
                 ctx.Load(permissionLevels);
- 
-                ctx.ExecuteQuery();
+
+                ctx.ExecuteQuery();  
 
                 if (CheckUserDomainFrom(siteProps, currentEmail))
                 {
@@ -69,7 +72,7 @@ namespace PermissionControlAzureFunctions
                             // Add Custom Pemission Level to Group
                             web.AddPermissionLevelToGroup(groupName, "SCJ External Contribute", true);
 
-                            web.AddUserToGroup(group, currentEmail);
+                            //web.AddUserToGroup(group, currentEmail);
                         }
 
                         if (groupName == "SCJ External Read")
@@ -81,7 +84,7 @@ namespace PermissionControlAzureFunctions
                             // Add Custom Pemission Level to Group
                             web.AddPermissionLevelToGroup(groupName, "SCJ External Read", true);
 
-                            web.AddUserToGroup(group, currentEmail);
+                            //web.AddUserToGroup(group, currentEmail);
                         }
 
                     }
@@ -124,60 +127,110 @@ namespace PermissionControlAzureFunctions
 
         private static Group AddGroup(Web web, string groupName)
         {
-            var newGroup =  web.AddGroup(groupName, "Permission Control - Custom Contribute Group for External User", true, true, false);
+            var newGroup = web.AddGroup(groupName, "Permission Control - Custom Contribute Group for External User", true, true, false);
             return newGroup;
         }
 
         private static void CreateContributePermissionLevel(Web web)
         {
-                // Create New Custom Permission Level
-                RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
-                BasePermissions perms = new BasePermissions();
-                perms.Set(PermissionKind.AddListItems);
-                perms.Set(PermissionKind.EditListItems);
-                perms.Set(PermissionKind.DeleteListItems);
-                perms.Set(PermissionKind.ViewListItems);
-                perms.Set(PermissionKind.ApproveItems);
-                perms.Set(PermissionKind.OpenItems);
-                perms.Set(PermissionKind.ViewVersions);
-                perms.Set(PermissionKind.DeleteVersions);
-                perms.Set(PermissionKind.CreateAlerts);
-                perms.Set(PermissionKind.ViewPages);
-                perms.Set(PermissionKind.BrowseDirectories);
-                perms.Set(PermissionKind.BrowseUserInfo);
-                perms.Set(PermissionKind.UseClientIntegration);
-                perms.Set(PermissionKind.Open);
-                perms.Set(PermissionKind.EditMyUserInfo);
-                perms.Set(PermissionKind.ManagePersonalViews);
-                perms.Set(PermissionKind.AddDelPrivateWebParts);
-                perms.Set(PermissionKind.UpdatePersonalWebParts);
-                roleDefinitionCreationInformation.BasePermissions = perms;
-                roleDefinitionCreationInformation.Name = "SCJ External Contribute";
-                roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Contribute";
-                web.RoleDefinitions.Add(roleDefinitionCreationInformation);
-            
+            // Create New Custom Permission Level
+            RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
+            BasePermissions perms = new BasePermissions();
+            perms.Set(PermissionKind.AddListItems);
+            perms.Set(PermissionKind.EditListItems);
+            perms.Set(PermissionKind.DeleteListItems);
+            perms.Set(PermissionKind.ViewListItems);
+            perms.Set(PermissionKind.ApproveItems);
+            perms.Set(PermissionKind.OpenItems);
+            perms.Set(PermissionKind.ViewVersions);
+            perms.Set(PermissionKind.DeleteVersions);
+            perms.Set(PermissionKind.CreateAlerts);
+            perms.Set(PermissionKind.ViewPages);
+            perms.Set(PermissionKind.BrowseDirectories);
+            perms.Set(PermissionKind.BrowseUserInfo);
+            perms.Set(PermissionKind.UseClientIntegration);
+            perms.Set(PermissionKind.Open);
+            perms.Set(PermissionKind.EditMyUserInfo);
+            perms.Set(PermissionKind.ManagePersonalViews);
+            perms.Set(PermissionKind.AddDelPrivateWebParts);
+            perms.Set(PermissionKind.UpdatePersonalWebParts);
+            roleDefinitionCreationInformation.BasePermissions = perms;
+            roleDefinitionCreationInformation.Name = "SCJ External Contribute";
+            roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Contribute";
+            web.RoleDefinitions.Add(roleDefinitionCreationInformation);
+
         }
 
         private static void CreateReadPermissionLevel(Web web)
-        {          
-                // Create New Custom Permission Level
-                RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
-                BasePermissions perms = new BasePermissions();
-                perms.Set(PermissionKind.ViewListItems);
-                perms.Set(PermissionKind.ApproveItems);
-                perms.Set(PermissionKind.OpenItems);
-                perms.Set(PermissionKind.ViewVersions);
-                perms.Set(PermissionKind.DeleteVersions);
-                perms.Set(PermissionKind.CreateAlerts);
-                perms.Set(PermissionKind.ViewFormPages);
-                perms.Set(PermissionKind.ViewPages);
-                perms.Set(PermissionKind.BrowseUserInfo);
-                perms.Set(PermissionKind.UseClientIntegration);
-                perms.Set(PermissionKind.Open);
-                roleDefinitionCreationInformation.BasePermissions = perms;
-                roleDefinitionCreationInformation.Name = "SCJ External Read";
-                roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Read";
-                web.RoleDefinitions.Add(roleDefinitionCreationInformation);          
+        {
+            // Create New Custom Permission Level
+            RoleDefinitionCreationInformation roleDefinitionCreationInformation = new RoleDefinitionCreationInformation();
+            BasePermissions perms = new BasePermissions();
+            perms.Set(PermissionKind.ViewListItems);
+            perms.Set(PermissionKind.ApproveItems);
+            perms.Set(PermissionKind.OpenItems);
+            perms.Set(PermissionKind.ViewVersions);
+            perms.Set(PermissionKind.DeleteVersions);
+            perms.Set(PermissionKind.CreateAlerts);
+            perms.Set(PermissionKind.ViewFormPages);
+            perms.Set(PermissionKind.ViewPages);
+            perms.Set(PermissionKind.BrowseUserInfo);
+            perms.Set(PermissionKind.UseClientIntegration);
+            perms.Set(PermissionKind.Open);
+            roleDefinitionCreationInformation.BasePermissions = perms;
+            roleDefinitionCreationInformation.Name = "SCJ External Read";
+            roleDefinitionCreationInformation.Description = "Custom Permission Level - SCJ External Read";
+            web.RoleDefinitions.Add(roleDefinitionCreationInformation);
+        }
+
+        private static void AddExternalUserAPI(Web web, string siteUrl, string externalUserEmail)
+        {
+            var emailBody = "Welcome to site " + web.Title;
+
+            var peoplePickerInput = new
+            {
+                Key = externalUserEmail,
+                DisplayText = externalUserEmail,
+                IsResolved = true,
+                Description = externalUserEmail,
+                EntityType = "",
+                EntityData = new
+                {
+                    SPUserID = externalUserEmail,
+                    Email = externalUserEmail,
+                    IsBlocked = "False",
+                    PrincipalType = "UNVALIDATED_EMAIL_ADDRESS",
+                    AccountName = externalUserEmail,
+                    SIPAddress = externalUserEmail,
+                    IsBlockedOnODB = "False"
+                },
+                MultipleMatches = "",
+                ProviderName = "",
+                ProviderDisplayName = ""
+            };
+
+            var peoplePickerInputSerialized = JsonConvert.SerializeObject(peoplePickerInput);
+
+
+            var body = new
+            {
+                emailBody,
+                includeAnonymousLinkInEmail = "false",
+                peoplePickerInputSerialized,
+                roleValue = "group:4",
+                sendEmail = "false",
+                url = siteUrl,
+                useSimplifiedRoles = "true"
+            };
+
+            var bodySerialized = JsonConvert.SerializeObject(body);
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(bodySerialized);
+            var byteContent = new ByteArrayContent(buffer);
+
+            byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            var client = new HttpClient();
+            var result = client.PostAsync(siteUrl + "/_api/ Web.ShareObject", byteContent).Result;
         }
     }
 }
