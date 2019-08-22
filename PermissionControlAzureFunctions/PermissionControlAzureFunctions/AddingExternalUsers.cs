@@ -26,11 +26,15 @@ namespace PermissionControlAzureFunctions
             try
             {
                 // Gets data from request body.
+                log.Info("Starting...");
                 dynamic data = await req.Content.ReadAsAsync<object>();
 
                 string siteUrl = data.SiteUrl;
                 string currentEmail = data.CurrentUser_EmailAddress;
                 string groupName = data.GroupName;
+                log.Info(siteUrl);
+                log.Info(currentEmail);
+                log.Info(groupName);
                 if (String.IsNullOrEmpty(siteUrl) || String.IsNullOrEmpty(currentEmail))
                     return req.CreateResponse(HttpStatusCode.BadRequest, "Please pass parametes site URL and Email Address in request body!");
 
@@ -40,24 +44,37 @@ namespace PermissionControlAzureFunctions
                 string urlAdminSite = Environment.GetEnvironmentVariable("UrlAdminSite", EnvironmentVariableTarget.Process);
 
                 // Obtains client context using the client id and client secret.
-                var ctx = new OfficeDevPnP.Core.AuthenticationManager().GetAppOnlyAuthenticatedContext(urlAdminSite, clientId, clientSecret);
+                //var ctx = new OfficeDevPnP.Core.AuthenticationManager().GetAppOnlyAuthenticatedContext(urlAdminSite, clientId, clientSecret);
 
-                Tenant tenant = new Tenant(ctx);
-                SiteProperties siteProps = tenant.GetSitePropertiesByUrl(siteUrl, true);
-                Site site = tenant.GetSiteByUrl(siteUrl);
+                //Tenant tenant = new Tenant(ctx);
+                //SiteProperties siteProps = tenant.GetSitePropertiesByUrl(siteUrl, true);
+                //log.Info("a");
+                //ctx.Load(siteProps);
+                //log.Info("after tenant:" + siteUrl);
+                //ctx.ExecuteQuery();
+                //log.Info("after line " + siteUrl);
+
+                var newctx = new OfficeDevPnP.Core.AuthenticationManager().GetAppOnlyAuthenticatedContext(siteUrl, clientId, clientSecret);
+
+                Site site = newctx.Site;
                 Web web = site.RootWeb;
+                log.Info("get web");
                 Group group = null;
                 RoleDefinitionCollection permissionLevels = web.RoleDefinitions;
 
-                ctx.Load(web);
-                ctx.Load(web.SiteGroups);
-                ctx.Load(siteProps);
-                ctx.Load(permissionLevels);
+                log.Info("permissionLevels");
 
-                ctx.ExecuteQuery();  
+                newctx.Load(web);
+                newctx.Load(web.SiteGroups);
+               
+                newctx.Load(permissionLevels);
+                log.Info("execute query");
+                newctx.ExecuteQuery();
 
-                if (CheckUserDomainFrom(siteProps, currentEmail))
-                {
+                log.Info("after newctx");
+
+                //if (CheckUserDomainFrom(siteProps, currentEmail))
+                //{
                     // If group doesn't exist in web, add it
                     if (!GroupExistsInWebSite(web, groupName))
                     {
@@ -72,7 +89,6 @@ namespace PermissionControlAzureFunctions
                             // Add Custom Pemission Level to Group
                             web.AddPermissionLevelToGroup(groupName, "SCJ External Contribute", true);
 
-                            //web.AddUserToGroup(group, currentEmail);
                         }
 
                         if (groupName == "SCJ External Read")
@@ -84,21 +100,19 @@ namespace PermissionControlAzureFunctions
                             // Add Custom Pemission Level to Group
                             web.AddPermissionLevelToGroup(groupName, "SCJ External Read", true);
 
-                            //web.AddUserToGroup(group, currentEmail);
                         }
 
                     }
                     else // Just Add the user to group
                     {
                         group = web.SiteGroups.GetByName(groupName);
-                        //web.AddUserToGroup(group, "lisandrorossi444@gmail.com");
-                        //group.InviteExternalUser("lisandrorossi444@gmail.com");  
+                       
                     }
-                    ctx.ExecuteQuery();
+                    newctx.ExecuteQuery();
                     return req.CreateResponse(HttpStatusCode.OK, true);
-                }
+                //}
 
-                return req.CreateResponse(HttpStatusCode.OK, false);
+               // return req.CreateResponse(HttpStatusCode.OK, false);
 
             }
             catch (Exception e)
