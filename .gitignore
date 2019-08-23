@@ -6,3 +6,4 @@
 /.vs
 /PermissionControlAzureFunctions/.vs/config/applicationhost.config
 /PermissionControlAzureFunctions/PermissionControlAzureFunctions/Properties/PublishProfiles/PermissionControlAzureFunctionsDev - Web Deploy.pubxml
+/PermissionControlAzureFunctions/.vs/PermissionControlAzureFunctions/v16/Server/sqlite3

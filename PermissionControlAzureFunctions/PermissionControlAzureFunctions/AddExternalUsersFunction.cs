@@ -25,6 +25,7 @@ namespace PermissionControlAzureFunctions
                 dynamic data = await req.Content.ReadAsAsync<object>();
 
                 string siteUrl = data.SiteUrl;
+                //test comment
                 string currentEmail = data.CurrentUser_EmailAddress;
                 if (String.IsNullOrEmpty(siteUrl) || String.IsNullOrEmpty(currentEmail))
                     return req.CreateResponse(HttpStatusCode.BadRequest, "Please pass parametes site URL and Email Address in request body!");
